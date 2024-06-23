@@ -1,3 +1,4 @@
+use crate::iter::ExtendedMathsHeatplotIter;
 use core::ops::Range;
 use plotters::prelude::*;
 
@@ -23,43 +24,63 @@ def_linear_colormap! {
     WHITE
 }
 
-const BG: &RGBColor = &BLACK;
-const FG: &RGBColor = &WHITE;
-
-pub struct Heatplot2D {
-    title: String,
-    out_file_name: String,
-    color_fn: Box<dyn Fn(f64) -> RGBColor>,
-    /// Fn that takes in xs, ys and samples and returns the iterator of the coordinates and computed value
-    compute_fn: Box<
+pub struct Heatplot2D<'a> {
+    pub title: Option<&'a str>,
+    pub out_file_name: &'a str,
+    /// Fn that maps the normalized computed value to a RGBColor
+    pub color_fn: Box<dyn Fn(f64) -> RGBColor>,
+    /// Fn that takes in x range, y range and their samples
+    /// Returns the iterator of the coordinates and normalized computed value
+    pub compute_fn: Box<
         dyn Fn(Range<f64>, Range<f64>, (usize, usize)) -> Box<dyn Iterator<Item = (f64, f64, f64)>>,
     >,
-    res: (u32, u32),
-    xr: Range<f64>,
-    yr: Range<f64>,
+    /// Resolution in px
+    pub res: (u32, u32),
+    pub x_range: Range<f64>,
+    pub y_range: Range<f64>,
+    pub margin: i32,
+    pub x_label_area_size: i32,
+    pub y_label_area_size: i32,
+    pub text_style: TextStyle<'a>,
+    pub bg: &'a RGBColor,
+    pub fg: &'a RGBColor,
 }
 
-impl Heatplot2D {
-    pub fn new(
-        title: String,
-        out_file_name: String,
-        color_fn: impl Fn(f64) -> RGBColor + 'static,
-        compute_fn: impl Fn(Range<f64>, Range<f64>, (usize, usize)) -> Box<dyn Iterator<Item = (f64, f64, f64)>>
-            + 'static,
-        res: (u32, u32),
-        xr: Range<f64>,
-        yr: Range<f64>,
-    ) -> Self {
+impl std::default::Default for Heatplot2D<'_> {
+    fn default() -> Self {
         Self {
-            title,
-            out_file_name,
-            color_fn: Box::new(color_fn),
-            compute_fn: Box::new(compute_fn),
-            res,
-            xr,
-            yr,
+            title: None,
+            out_file_name: "out.png",
+            color_fn: Box::new(|x: f64| WarmHeatMap.get_color(x)),
+            compute_fn: Box::new(|xs: Range<f64>, ys: Range<f64>, samples: (usize, usize)| {
+                let step = (
+                    (xs.end - xs.start) / samples.0 as f64,
+                    (ys.end - ys.start) / samples.1 as f64,
+                );
+                Box::new(
+                    (0..(samples.0 * samples.1))
+                        .map(move |k| {
+                            let x = xs.start + step.0 * (k % samples.0) as f64;
+                            let y = ys.start + step.1 * (k / samples.0) as f64;
+                            (x, y, x)
+                        })
+                        .norm(),
+                )
+            }),
+            res: (800, 800),
+            x_range: 0.0..10.0,
+            y_range: 0.0..10.0,
+            margin: 20,
+            x_label_area_size: 30,
+            y_label_area_size: 30,
+            text_style: ("sans-serif", 24).into_font().color(&WHITE),
+            bg: &BLACK,
+            fg: &WHITE,
         }
     }
+}
+
+impl Heatplot2D<'_> {
     pub fn generate(&self) -> Result<(), Box<dyn std::error::Error>> {
         let Self {
             title,
@@ -67,28 +88,43 @@ impl Heatplot2D {
             color_fn,
             compute_fn,
             res,
-            xr,
-            yr,
+            x_range,
+            y_range,
+            margin,
+            x_label_area_size,
+            y_label_area_size,
+            text_style,
+            bg,
+            fg,
         } = self;
 
         println!("GENERATING HEATPLOT {title:?}...");
         let root = BitMapBackend::new(out_file_name, *res).into_drawing_area();
 
-        root.fill(&BG)?;
+        root.fill(bg)?;
 
-        let mut chart = ChartBuilder::on(&root)
-            .caption(title, ("sans-serif", 24).into_font().color(&FG))
-            .margin(20)
-            .x_label_area_size(30)
-            .y_label_area_size(30)
-            .build_cartesian_2d(xr.clone(), yr.clone())?;
+        let mut builder = ChartBuilder::on(&root);
+
+        let mut chart = if let Some(title) = title {
+            builder
+                .caption(title, text_style.clone())
+                .margin(*margin)
+                .x_label_area_size(*x_label_area_size)
+                .y_label_area_size(*y_label_area_size)
+        } else {
+            builder
+                .margin(*margin)
+                .x_label_area_size(*x_label_area_size)
+                .y_label_area_size(*y_label_area_size)
+        }
+        .build_cartesian_2d(x_range.clone(), y_range.clone())?;
 
         chart
             .configure_mesh()
             .x_labels(5)
             .y_labels(5)
-            .label_style(("sans-serif", 24).into_font().color(&FG))
-            .axis_style(&FG)
+            .label_style(text_style.clone())
+            .axis_style(fg)
             .disable_x_mesh()
             .disable_y_mesh()
             .draw()?;

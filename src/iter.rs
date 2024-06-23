@@ -1,6 +1,6 @@
 use crate::f64::ExtendedMathsF64;
 
-pub trait ExtendedMathsIter: Iterator<Item = (f64, f64, f64)> + Clone {
+pub trait ExtendedMathsHeatplotIter: Iterator<Item = (f64, f64, f64)> + Clone {
     fn norm(self) -> impl Iterator<Item = (f64, f64, f64)> {
         let min_max = self
             .clone()
@@ -11,4 +11,4 @@ pub trait ExtendedMathsIter: Iterator<Item = (f64, f64, f64)> + Clone {
     }
 }
 
-impl<I> ExtendedMathsIter for I where I: Iterator<Item = (f64, f64, f64)> + Clone {}
+impl<I> ExtendedMathsHeatplotIter for I where I: Iterator<Item = (f64, f64, f64)> + Clone {}
