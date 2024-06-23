@@ -4,4 +4,4 @@
 
 `cargo run --release --bin=hsp`
 
-<img width="400" src="https://github.com/ndavd/physics/blob/main/hsp-v0.999.png" />
+<img width="400" src="https://github.com/ndavd/physics/blob/main/hsp.png" />
