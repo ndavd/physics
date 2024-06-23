@@ -98,7 +98,7 @@ impl Heatplot2D<'_> {
             fg,
         } = self;
 
-        println!("GENERATING HEATPLOT {title:?}...");
+        println!("GENERATING HEATPLOT: {}...", title.unwrap_or(""));
         let root = BitMapBackend::new(out_file_name, *res).into_drawing_area();
 
         root.fill(bg)?;
@@ -138,7 +138,7 @@ impl Heatplot2D<'_> {
         }
 
         root.present()?;
-        println!("DONE. Saved to {}", out_file_name);
+        println!("HEATPLOT DONE: {}", out_file_name);
 
         Ok(())
     }
