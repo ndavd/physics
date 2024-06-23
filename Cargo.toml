@@ -1,0 +1,8 @@
+[package]
+name = "physics"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+num-traits = "0.2.19"
+plotters = { version = "0.3.6", features = ["colormaps"]}
