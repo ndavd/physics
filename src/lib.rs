@@ -138,7 +138,7 @@ impl Heatplot2D<'_> {
         }
 
         root.present()?;
-        println!("HEATPLOT DONE: {}", out_file_name);
+        println!("HEATPLOT DONE: Saved to {}", out_file_name);
 
         Ok(())
     }

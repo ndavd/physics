@@ -2,6 +2,7 @@ use physics::f64::*;
 use physics::iter::*;
 use physics::*;
 use std::ops::Range;
+use std::rc::Rc;
 
 const V: f64 = 1.0;
 const MU: f64 = 0.0;
@@ -44,25 +45,34 @@ fn hsp_prob_density(
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let (phi_str, phi) = ("x^2", |x: f64| x.powi(2));
+    let phis: &[(&str, &str, fn(f64) -> f64)] = &[
+        ("quadratic-phase", "x^2", |x: f64| x.powi(2)),
+        ("quartic-phase", "x^4 - x^3 - 3x^2 - 5x", |x: f64| {
+            x.powi(4) - x.powi(3) - 3.0 * x.powi(2) - 5.0 * x
+        }),
+    ];
     let psi_u = move |x: f64| x.gaussian(MU, SIGMA);
     let psi_r = psi_u;
-    Heatplot2D {
-        title: format!(
-            "HSP Probability Density (V = {V}, Φ = {phi_str}, Ψu = Ψr = N({MU}, {}))",
-            SIGMA.powi(2)
-        )
-        .as_str()
-        .into(),
-        out_file_name: "hsp.png",
-        compute_fn: Box::new(
-            move |xs: Range<f64>, ys: Range<f64>, samples: (usize, usize)| {
-                Box::new(hsp_prob_density(xs, ys, samples, phi, psi_u, psi_r))
-            },
-        ),
-        x_range: X_RANGE,
-        y_range: Y_RANGE,
-        ..Default::default()
+    for i in 0..phis.len() {
+        let (phi_title, phi_str, phi) = phis[i];
+        Heatplot2D {
+            title: format!(
+                "HSP Probability Density (V = {V}, Φ = {phi_str}, Ψu = Ψr = N({MU}, {}))",
+                SIGMA.powi(2)
+            )
+            .as_str()
+            .into(),
+            out_file_name: format!("hsp-{phi_title}.png").as_str(),
+            compute_fn: Box::new(
+                move |xs: Range<f64>, ys: Range<f64>, samples: (usize, usize)| {
+                    Box::new(hsp_prob_density(xs, ys, samples, phi, psi_u, psi_r))
+                },
+            ),
+            x_range: X_RANGE,
+            y_range: Y_RANGE,
+            ..Default::default()
+        }
+        .generate()?
     }
-    .generate()
+    Ok(())
 }
